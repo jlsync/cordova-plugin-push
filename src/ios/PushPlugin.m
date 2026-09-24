@@ -25,12 +25,9 @@
 
 #import "PushPlugin.h"
 #import "PushPluginConstants.h"
-#import "PushPluginFCM.h"
 #import "PushPluginSettings.h"
 
 @interface PushPlugin ()
-
-@property (nonatomic, strong) PushPluginFCM *pushPluginFCM;
 
 @property (nonatomic, strong) NSDictionary *launchNotification;
 @property (nonatomic, strong) NSDictionary *notificationMessage;
@@ -53,12 +50,6 @@
 @synthesize callbackId;
 
 - (void)pluginInitialize {
-    self.pushPluginFCM = [[PushPluginFCM alloc] initWithGoogleServicePlist];
-
-    if([self.pushPluginFCM isFCMEnabled]) {
-        [self.pushPluginFCM configure:self.commandDelegate];
-    }
-
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(didRegisterForRemoteNotificationsWithDeviceToken:)
                                                  name:PluginDidRegisterForRemoteNotificationsWithDeviceToken
@@ -94,7 +85,8 @@
     NSArray* topics = [command argumentAtIndex:0];
 
     if (topics != nil) {
-        [self.pushPluginFCM unsubscribeFromTopics:topics];
+        // Missive: FCM removed on iOS, topics are not supported.
+        [self successWithMessage:command.callbackId withMsg:@"Topics are not supported. FCM is not enabled."];
     } else {
         [[UIApplication sharedApplication] unregisterForRemoteNotifications];
         [self successWithMessage:command.callbackId withMsg:@"unregistered"];
@@ -102,49 +94,21 @@
 }
 
 - (void)subscribe:(CDVInvokedUrlCommand *)command {
-    if (!self.pushPluginFCM.isFCMEnabled) {
-        NSLog(@"[PushPlugin] The 'subscribe' API not allowed. FCM is not enabled.");
-        [self successWithMessage:command.callbackId withMsg:@"The 'subscribe' API not allowed. FCM is not enabled."];
-        return;
-    }
-
-    NSString* topic = [command argumentAtIndex:0];
-    if (topic == nil) {
-        NSLog(@"[PushPlugin] There is no topic to subscribe");
-        [self successWithMessage:command.callbackId withMsg:@"There is no topic to subscribe"];
-        return;
-    }
-
-    [self.pushPluginFCM subscribeToTopic:topic];
-    [self successWithMessage:command.callbackId withMsg:[NSString stringWithFormat:@"Successfully subscribe to topic %@", topic]];
+    // Missive: FCM removed on iOS, topics are not supported.
+    NSLog(@"[PushPlugin] The 'subscribe' API not allowed. FCM is not enabled.");
+    [self successWithMessage:command.callbackId withMsg:@"The 'subscribe' API not allowed. FCM is not enabled."];
 }
 
 - (void)unsubscribe:(CDVInvokedUrlCommand *)command {
-    if (!self.pushPluginFCM.isFCMEnabled) {
-        NSLog(@"[PushPlugin] The 'unsubscribe' API not allowed. FCM is not enabled.");
-        [self successWithMessage:command.callbackId withMsg:@"The 'unsubscribe' API not allowed. FCM is not enabled."];
-        return;
-    }
-
-    NSString* topic = [command argumentAtIndex:0];
-    if (topic == nil) {
-        NSLog(@"[PushPlugin] There is no topic to unsubscribe from.");
-        [self successWithMessage:command.callbackId withMsg:@"There is no topic to unsubscribe from."];
-        return;
-    }
-
-    [self.pushPluginFCM unsubscribeFromTopic:topic];
-    [self successWithMessage:command.callbackId withMsg:[NSString stringWithFormat:@"Successfully unsubscribe from topic %@", topic]];
+    // Missive: FCM removed on iOS, topics are not supported.
+    NSLog(@"[PushPlugin] The 'unsubscribe' API not allowed. FCM is not enabled.");
+    [self successWithMessage:command.callbackId withMsg:@"The 'unsubscribe' API not allowed. FCM is not enabled."];
 }
 
 - (void)init:(CDVInvokedUrlCommand *)command {
     NSMutableDictionary* options = [command.arguments objectAtIndex:0];
     [[PushPluginSettings sharedInstance] updateSettingsWithOptions:[options objectForKey:@"ios"]];
     PushPluginSettings *settings = [PushPluginSettings sharedInstance];
-
-    if ([self.pushPluginFCM isFCMEnabled]) {
-        self.pushPluginFCM.callbackId = command.callbackId;
-    }
 
     self.callbackId = command.callbackId;
 
@@ -215,11 +179,7 @@
 
     NSLog(@"[PushPlugin] Successfully registered device for remote notification. (device token: %@)", deviceToken);
 
-    if ([self.pushPluginFCM isFCMEnabled]) {
-        [self.pushPluginFCM configureTokens:deviceToken];
-    } else {
-        [self registerWithToken:[self convertTokenToString:deviceToken]];
-    }
+    [self registerWithToken:[self convertTokenToString:deviceToken]];
 }
 
 - (NSString *)convertTokenToString:(NSData *)deviceToken {
